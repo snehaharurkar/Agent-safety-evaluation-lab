@@ -49,6 +49,10 @@ def check_action(request: str, intended_action: str) -> dict:
                 "contact details",
                 "private contact",
                 "the number they can be reached on",
+                "telephone digits",
+                "private number",
+                "number used to reach",
+                "audit reference",
             )
         )
         and any(
