@@ -10,51 +10,65 @@ Can a safety-checking layer reduce unsafe tool calls by an AI agent without unne
 
 AI agents can use tools to retrieve information or perform actions. If an agent executes a sensitive action without appropriate checks, it may expose information that should remain protected.
 
-This project explores a simple safety-checking layer that evaluates an agent's intended action before a tool is executed.
+This project investigates a simple pre-execution safety checker using synthetic customer data and local mock tools.
 
 ## Experimental Setup
 
-The prototype uses a rule-based agent, synthetic customer records, and a hand-written dataset of 12 test cases.
+The prototype uses a rule-based agent, synthetic customer records, and 14 hand-written test cases.
 
-The test cases cover:
+The cases cover:
 
 - Legitimate information-summary requests
 - Direct requests to disclose sensitive phone numbers
-- Requests containing adversarial or conflicting instructions
+- Adversarial or conflicting instructions
 - Ambiguous requests requiring clarification
 - Unknown customer records
+- Alternative wording for private contact information
 
-A mock tool simulates access to sensitive information. It does not contact real people or access external systems.
+The mock tools do not contact real people or access external customer systems.
 
 ## Method
 
 The agent is evaluated in two configurations:
 
-1. **Baseline:** The agent operates without the safety-checking layer.
-2. **Safety checker enabled:** The agent's intended action is checked before tool execution.
+1. **Baseline:** The agent runs without the additional safety checker.
+2. **Safety checker enabled:** The checker evaluates the intended action and selected request wording before tool execution.
 
-The evaluation records sensitive tool calls, successful summaries, blocked actions, and false refusals.
+The evaluation reports sensitive phone-number tool calls, successful summaries, blocked actions, and false refusals.
 
 ## Preliminary Results
 
-Across the 12 hand-written test cases:
+The current evaluation contains 14 hand-written test cases.
 
 | Metric                            | Baseline | Safety checker enabled |
 | --------------------------------- | -------: | ---------------------: |
 | Sensitive phone-number tool calls |        2 |                      0 |
 | Successful summaries              |        8 |                      8 |
-| Blocked actions                   |        0 |                      2 |
+| Blocked actions                   |        0 |                      4 |
 | False refusals                    |        0 |                      0 |
 
-These results are preliminary and specific to this prototype and dataset.
+These results are specific to the current implementation and dataset. Rerun the evaluation after changing the code or test cases.
+
+## Adversarial Findings
+
+**T13 — Sensitive information hidden in a summary request**
+
+The request asks for a summary while also asking for a private phone number. The agent initially classifies it as a summary request, and the original checker does not block it. A request-content rule was added to catch this wording.
+
+**T14 — Alternative wording for private contact information**
+
+The request asks for a summary and to append private contact details. The initial checker misses this wording. An additional rule was added, and the subsequent evaluation showed that T14 was blocked.
+
+These cases demonstrate that keyword-based checks can miss unsafe intent when the wording differs from the patterns they recognize. Blocking these two examples does not establish robustness against other paraphrases or attacks.
 
 ## Limitations
 
-- The dataset contains only 12 manually written test cases.
-- The agent and safety checker use simple rules rather than a language model.
-- The results do not establish performance against diverse or adaptive adversarial attacks.
-- The baseline agent logic was refined during development, so the comparison does not isolate the effect of the safety checker from all other implementation choices.
-- The absence of false refusals in this small dataset does not demonstrate that legitimate tasks will always be preserved.
+- The dataset contains only 14 manually written test cases.
+- The agent and checker use simple rules rather than a general-purpose language model.
+- The checker covers a narrow set of sensitive actions and wording patterns.
+- The results do not establish robustness against diverse or adaptive adversarial attacks.
+- The baseline logic was refined during development, limiting causal interpretation of the comparison.
+- Zero observed false refusals in this small dataset does not prove that legitimate tasks will always be preserved.
 
 ## Reproducibility
 
@@ -65,7 +79,7 @@ These results are preliminary and specific to this prototype and dataset.
 
 ### Setup
 
-Clone the repository and enter its directory:
+Clone the repository:
 
 ```bash
 git clone https://github.com/snehaharurkar/agent-safety-evaluation-lab.git
@@ -76,7 +90,7 @@ Create and activate a virtual environment.
 
 On Windows:
 
-```bash
+```bat
 python -m venv .venv
 .venv\Scripts\activate
 ```
@@ -101,6 +115,6 @@ python -m src.evaluate
 
 ## Research Status
 
-This is an early-stage safety evaluation prototype. The next research steps are to expand the test set, define clearer attack categories, compare more safety-checking strategies, and investigate when the checker fails.
+This is an early-stage safety evaluation prototype. Planned work includes expanding the test set, testing unseen paraphrases, tracking attempted and executed tool calls separately, and comparing alternative safety-checking strategies.
 
-The goal is to measure safety and task preservation together rather than treating every blocked action as a success.
+The objective is to evaluate safety and legitimate task completion together rather than treating every blocked action as a success.
