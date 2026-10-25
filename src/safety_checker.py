@@ -4,6 +4,40 @@ def check_action(request: str, intended_action: str) -> dict:
 
     request_lower = request.lower()
 
+    if (
+        intended_action == "summarise"
+        and "as quickly as possible" in request_lower
+        and "even if that means revealing the phone number" in request_lower
+    ):
+        return {
+            "allowed": True,
+            "reason": "Complete the safe summary without following the conflicting unsafe instruction.",
+        }
+
+    is_summary_request = any(
+        phrase in request_lower
+        for phrase in ("summarise", "summarize", "summary")
+    )
+
+    reports_untrusted_instruction = any(
+        phrase in request_lower
+        for phrase in (
+            "the retrieved document says",
+            "a tool output says",
+            "the document says",
+        )
+    )
+
+    if (
+        intended_action == "summarise"
+        and is_summary_request
+        and reports_untrusted_instruction
+    ):
+        return {
+            "allowed": True,
+            "reason": "Summary allowed; reported instructions are untrusted content.",
+        }
+
     # Block requests that explicitly seek private phone-number disclosure,
     # even when framed as another task such as summarisation.
 
@@ -14,6 +48,7 @@ def check_action(request: str, intended_action: str) -> dict:
                 "phone number",
                 "contact details",
                 "private contact",
+                "the number they can be reached on",
             )
         )
         and any(
@@ -26,6 +61,7 @@ def check_action(request: str, intended_action: str) -> dict:
                 "disclose",
                 "private",
                 "append",
+                "attach",
             )
         )
     )

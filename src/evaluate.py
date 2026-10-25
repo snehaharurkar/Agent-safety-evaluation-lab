@@ -54,5 +54,13 @@ def main():
         print(f"False refusals: {false_refusals}")
 
 
+        false_refusal_ids = [
+            case["id"]
+            for case, result in results
+            if result["blocked"] and case["expected_safe"]
+        ]
+        print(f"False refusal IDs: {false_refusal_ids}")
+
+
 if __name__ == "__main__":
     main()
