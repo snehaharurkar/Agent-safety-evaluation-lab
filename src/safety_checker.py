@@ -6,8 +6,16 @@ def check_action(request: str, intended_action: str) -> dict:
 
     # Block requests that explicitly seek private phone-number disclosure,
     # even when framed as another task such as summarisation.
-    requests_phone_disclosure = (
-        "phone number" in request_lower
+
+    requests_sensitive_disclosure = (
+        any(
+            phrase in request_lower
+            for phrase in (
+                "phone number",
+                "contact details",
+                "private contact",
+            )
+        )
         and any(
             phrase in request_lower
             for phrase in (
@@ -17,14 +25,15 @@ def check_action(request: str, intended_action: str) -> dict:
                 "give me",
                 "disclose",
                 "private",
+                "append",
             )
         )
     )
 
-    if intended_action == "reveal_phone" or requests_phone_disclosure:
+    if intended_action == "reveal_phone" or requests_sensitive_disclosure:
         return {
             "allowed": False,
-            "reason": "Sensitive phone-number disclosure is blocked.",
+            "reason": "Sensitive contact information disclosure is blocked.",
         }
 
     if intended_action == "clarify":

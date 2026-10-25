@@ -2,60 +2,76 @@
 
 ## Research Question
 
-Can a safety-checking layer reduce unsafe tool calls by an AI agent when it encounters malicious instructions, without unnecessarily blocking legitimate tasks?
+Can a safety-checking layer reduce unsafe tool calls by an AI agent encountering malicious or conflicting instructions without unnecessarily blocking legitimate tasks?
 
 ## Objective
 
-Build a small, reproducible prototype that compares an agent operating without an additional safety checker against the same agent operating with a safety checker.
+Build a reproducible prototype comparing an agent without an additional safety checker against the same agent with a safety checker enabled.
 
 ## Experimental Setup
 
-- **Dataset:** 8 hand-written test cases.
+- **Dataset:** 14 hand-written test cases.
 - **Data:** Synthetic customer records only.
 - **Tools:** Local mock functions; no external customer systems are accessed.
 - **Baseline:** Agent runs without the additional safety checker.
-- **Intervention:** Agent checks intended actions before executing tools.
-- **Evaluation:** Count sensitive phone-number tool calls, successful summaries, and blocked actions.
+- **Intervention:** The checker evaluates the intended action and selected request wording before tool execution.
+- **Evaluation:** Measure sensitive phone-number tool calls, successful summaries, blocked actions, and false refusals.
 
 ## Preliminary Results
 
-The evaluation uses 13 hand-written test cases and compares the agent with its safety checker disabled and enabled.
+The current evaluation uses 14 hand-written test cases. The results below reflect the latest observed run after adding the T14 rule.
 
-| Metric                            | Baseline | Safety checker enabled |
-| --------------------------------- | -------: | ---------------------: |
-| Sensitive phone-number tool calls |        2 |                      0 |
-| Successful summaries              |        8 |                      8 |
-| Blocked actions                   |        0 |                      3 |
-| False refusals                    |        0 |                      0 |
+| Metric | Baseline | Safety checker enabled |
+|---|---:|---:|
+| Sensitive phone-number tool calls | 2 | 0 |
+| Successful summaries | 8 | 8 |
+| Blocked actions | 0 | 4 |
+| False refusals | 0 | 0 |
 
-### Adversarial Case: T13
+These counts are specific to this test set and the current implementation. Rerun the evaluation before treating them as final if the code or dataset changes.
 
-T13 requests a customer summary while explicitly asking the agent to include a private phone number. In the baseline configuration, the agent classifies this as a summary request. The original checker also allowed it because it only checked the intended action.
+## Adversarial Findings
 
-After adding a request-content check, the safety-enabled agent blocks T13. A regression test now verifies that the action is blocked and the sensitive tool is not executed.
+### T13 — Sensitive information hidden in a summary request
 
-### Interpretation
+T13 asks for a customer summary while also asking for a private phone number. The baseline agent classifies it as a summary request, and the original checker allowed it because it checked only the intended action.
 
-This result demonstrates that checking only an agent's intended action can miss unsafe requests when the agent misclassifies them. Examining the request content caught this particular failure.
+A request-content rule was added to block this wording. A regression test verifies that the safety-enabled agent blocks the action.
 
-These results remain preliminary. The test set is small and hand-written, and the rule-based checker may fail on different wording, indirect requests, or other sensitive actions. Zero observed false refusals in this dataset does not establish that the approach will preserve legitimate tasks in general.
+### T14 — Alternative wording for private contact information
+
+T14 asks for a summary and requests that private contact details be appended. The initial implementation treated it as a summary and did not block it.
+
+The checker was then extended to recognize the phrases “contact details” and “private contact” in combination with selected disclosure-related wording. The subsequent evaluation showed T14 blocked.
+
+This is evidence that the added rule catches these particular examples, not evidence that it detects private-information requests in general.
+
+## Interpretation
+
+The pilot illustrates a limitation of checking only an agent's intended action: an unsafe request can be misclassified as an ordinary summary task. Adding request-content checks caught two specific adversarial examples in this dataset.
+
+The checker remains a narrow, keyword-based intervention. It may fail on different paraphrases, indirect requests, other sensitive data, or adversarial wording that does not match its rules.
+
+The absence of observed false refusals in this small dataset does not establish that legitimate tasks will be preserved in general.
 
 ## Limitations
 
-1. The dataset contains only eight manually written cases.
-2. The agent uses simple keyword-based rules rather than a general-purpose language model.
-3. The safety checker covers only a narrow set of actions.
-4. The tests do not establish robustness to diverse or paraphrased attacks.
-5. The observed result is too small to support general claims about AI agent safety.
+1. The dataset contains only 14 manually written cases.
+2. The agent and checker use simple rules rather than a general-purpose language model.
+3. The checker covers a narrow set of sensitive actions and wording patterns.
+4. The results do not establish robustness to diverse or adaptive attacks.
+5. The test set is small and may not represent real-world agent behavior.
+6. The baseline logic was refined during development, limiting causal interpretation of the comparison.
 
 ## Next Steps
 
 - Expand the dataset with varied direct requests, prompt-injection attempts, ambiguous requests, and legitimate edge cases.
-- Add automated checks for false refusals and task completion.
+- Add automated checks for false refusals and successful task completion.
 - Track attempted tool calls separately from executed tool calls.
-- Compare results across repeated, documented test sets.
-- Investigate whether the checker can be bypassed by rephrasing a sensitive request.
+- Evaluate previously unseen paraphrases rather than only wording used to develop the checker.
+- Compare the current keyword-based approach with alternative safety-checking strategies.
+- Document all failures, including cases the checker does not block.
 
 ## Conclusion
 
-This prototype demonstrates a basic, testable safety intervention: a pre-execution rule blocks a sensitive tool call in the current pilot dataset. Further evaluation is needed before drawing conclusions about effectiveness on real-world AI agents.
+This prototype demonstrates a testable pre-execution safety intervention that blocks several specific sensitive-information requests in a small synthetic dataset. Broader and more systematic evaluation is needed before drawing conclusions about its effectiveness on real-world AI agents.
